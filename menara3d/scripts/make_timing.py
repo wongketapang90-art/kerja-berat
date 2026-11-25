@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Build src/videos/bima/timing.ts from voice/words.json + segment layout.
+"""Build src/videos/menara/timing.ts from voice/words.json + segment layout.
 Segment layout must match how voice.wav was concatenated (see concat_voice.sh):
-segments in order s1..s8 with GAP seconds of silence between them.
+segments in order s1..s18 with GAP seconds of silence between them.
+Rantai tempo-cepat (keputusan Inas 25 Nov 2026 20:26): voice.wav =
+atempo(1.25, concat(proc)) sesudah kompresi jeda — bounds diukur dari proc/
+(pre-atempo) lalu dibagi ATEMPO, seperti pola Kapten uji1 (uji-pendek-1).
 """
 import json, subprocess, sys, os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FPS = 30
 GAP = 0.15
-SEGS = [f"s{i}" for i in range(1, 20)]
+SEGS = [f"s{i}" for i in range(1, 19)]
+ATEMPO = 1.25  # long Ayam Kubus: voice.wav = atempo(concat(proc)) -> bounds scale down
 
 def dur(path):
     out = subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration",
@@ -22,6 +26,9 @@ for i, s in enumerate(SEGS):
     bounds[s] = (t, t + d)
     t += d + (GAP if i < len(SEGS) - 1 else 0.0)
 total = t
+# scale raw layout into final (sped-up) time
+bounds = {s: (a / ATEMPO, b / ATEMPO) for s, (a, b) in bounds.items()}
+total = total / ATEMPO
 
 words = json.load(open(os.path.join(ROOT, "voice", "words.json")))["words"]
 W = [{"w": w["word"], "start": w["start"], "end": w["end"]} for w in words]
@@ -52,15 +59,13 @@ W = aligned
 print(f"captions: {len(W)} script words aligned onto ASR timings")
 
 # caption phrases: 2-4 words, break on sentence punctuation or pause > 0.4 s
+# Phrases are kept as word lists until render, so boundaries can shift.
 phrases = []
 cur = []
 def flush():
     global cur
     if cur:
-        phrases.append({
-            "text": " ".join(x["w"] for x in cur).replace("- ", "-"),
-            "a": round(cur[0]["start"] * FPS), "b": round(cur[-1]["end"] * FPS) + 5,
-        })
+        phrases.append(cur)
         cur = []
 for i, w in enumerate(W):
     cur.append(w)
@@ -73,12 +78,34 @@ flush()
 # merge 1-word phrases into the next phrase when the result stays <= 4 words
 merged = []
 for ph in phrases:
-    if merged and len(merged[-1]["text"].split()) == 1 and len(merged[-1]["text"].split()) + len(ph["text"].split()) <= 4:
-        merged[-1]["text"] = (merged[-1]["text"] + " " + ph["text"]).replace("- ", "-")
-        merged[-1]["b"] = ph["b"]
+    if merged and len(merged[-1]) == 1 and len(merged[-1]) + len(ph) <= 4:
+        merged[-1] = merged[-1] + ph
     else:
         merged.append(ph)
 phrases = merged
+
+# shift boundaries to eliminate any remaining 1-word phrase: move one word
+# across the boundary from the neighbour that can spare it (>= 3 words).
+# Prefer the previous phrase (the lone word is usually a sentence tail).
+changed = True
+while changed:
+    changed = False
+    for idx, ph in enumerate(phrases):
+        if len(ph) == 1:
+            if idx > 0 and len(phrases[idx - 1]) >= 3:
+                phrases[idx] = [phrases[idx - 1].pop()] + ph
+                changed = True
+            elif idx + 1 < len(phrases) and len(phrases[idx + 1]) >= 3:
+                phrases[idx] = ph + [phrases[idx + 1].pop(0)]
+                changed = True
+            break
+bad = [p for p in phrases if len(p) < 2 or len(p) > 4]
+assert not bad, f"frasa caption di luar 2-4 kata tersisa: {[len(p) for p in bad]}"
+
+phrases = [{
+    "text": " ".join(x["w"] for x in ph).replace("- ", "-"),
+    "a": round(ph[0]["start"] * FPS), "b": round(ph[-1]["end"] * FPS) + 5,
+} for ph in phrases]
 
 seg_js = ",\n  ".join(f'{s}: {{ a: {round(bounds[s][0]*FPS)}, b: {round(bounds[s][1]*FPS)} }}' for s in SEGS)
 words_js = ",\n  ".join(

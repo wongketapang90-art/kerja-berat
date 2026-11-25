@@ -21,6 +21,12 @@ export interface MenaraRefs {
   ayam: THREE.Group; ayamHead: THREE.Group;
   bebek: THREE.Group; bebekHead: THREE.Group;
   sapi: THREE.Group; sapiHead: THREE.Group; sapiAnak: THREE.Group;
+  // --- ADITIF episode Ayam Kubus (hanya di salinan ini; paket asli tak berubah)
+  burungTua: THREE.Group; burungTuaHead: THREE.Group;
+  slimeBlock: THREE.Group; bukit: THREE.Group; jerami: THREE.Group;
+  spanduk: THREE.Group; papanSkor: THREE.Group; garisKapur: THREE.Group;
+  bunga: THREE.Group; benderaKecil: THREE.Group; papanKayu: THREE.Group;
+  perch: THREE.Group; burungLangit: THREE.Group[];
   towerBima: THREE.Group; towerBimaLayers: THREE.Group[]; towerFlag: THREE.Group;
   towerTetangga: THREE.Group; towerTetanggaLayers: THREE.Group[];
   towerMonster: THREE.Group; towerMonsterLayers: THREE.Group[];
@@ -389,6 +395,184 @@ function buildCow(scene: THREE.Scene, scale: number) {
   return { root, head };
 }
 
+// ---------------------------------------------------------------- ADITIF Ayam Kubus
+// Semua builder di bawah ini hanya ada di salinan episode Ayam Kubus.
+// Puncak bukit: panggung adegan 22-36. Permukaan atas y = 6.3, pusat (22, -2).
+export const BUKIT_TOP_Y = 6.3;
+export const BUKIT_C: [number, number] = [22, -2];
+
+function buildBukit(scene: THREE.Scene) {
+  const g = new THREE.Group(); scene.add(g);
+  box(g, "#5da843", 26, 2, 22, 22, 1, -2);
+  box(g, "#69b84a", 20, 2, 16, 22, 3, -2);
+  box(g, "#76c253", 14, 2, 10, 22, 5, -2);
+  box(g, "#69b84a", 14, 0.3, 10, 22, 6.15, -2);
+  return g;
+}
+
+// Balok slime hijau tembus pandang (3x2x3). Grup diposisikan story.ts:
+// ladang (-4, 0, 2) adegan 16-20, puncak bukit (22, 6.3, -2) adegan 21+.
+function buildSlime(scene: THREE.Scene) {
+  const g = new THREE.Group(); scene.add(g);
+  const slimeMat = new THREE.MeshLambertMaterial({
+    color: "#7ee081", transparent: true, opacity: 0.62,
+    emissive: new THREE.Color("#2a7a2a"), emissiveIntensity: 0.4,
+  });
+  box(g, "#7ee081", 3, 2, 3, 0, 1, 0, { material: slimeMat });
+  box(g, "#a8ecab", 2.2, 1.4, 2.2, 0, 1, 0, { shadow: false, material: new THREE.MeshLambertMaterial({ color: "#a8ecab", transparent: true, opacity: 0.5, emissive: new THREE.Color("#2a7a2a"), emissiveIntensity: 0.3 }) });
+  box(g, "#c8f5c9", 1.2, 0.5, 1.2, -0.4, 2.05, 0.3, { shadow: false });
+  return g;
+}
+
+// Tumpukan jerami: satu besar (-8, 11, tinggi ±2.6 — tempat mimpi adegan 1/3)
+// + satu kecil (-3.5, 12.5) untuk pendaratan miring adegan 20.
+function buildJerami(scene: THREE.Scene) {
+  const g = new THREE.Group(); scene.add(g);
+  const stack = (x: number, z: number, s: number) => {
+    const h = new THREE.Group(); h.position.set(x, 0, z); h.scale.setScalar(s); g.add(h);
+    box(h, "#e3c568", 3.4, 1.0, 3.4, 0, 0.5, 0);
+    box(h, "#d9b95c", 2.7, 1.0, 2.7, 0, 1.45, 0);
+    box(h, "#e3c568", 1.9, 0.9, 1.9, 0, 2.3, 0);
+    box(h, "#c9a94b", 1.0, 0.7, 1.0, 0, 3.05, 0);
+    box(h, "#b8933f", 0.35, 0.5, 0.35, -0.8, 1.0, 0.8).rotation.z = 0.5;
+    box(h, "#b8933f", 0.35, 0.5, 0.35, 0.9, 1.9, -0.6).rotation.z = -0.6;
+  };
+  stack(-8, 11, 1);
+  stack(-3.5, 12.5, 0.62);
+  return g;
+}
+
+// Spanduk daun raksasa Monster (adegan 10): dua tiang + panel daun hijau
+// dengan gambar ayam terbang putih.
+function buildSpanduk(scene: THREE.Scene) {
+  const g = new THREE.Group(); g.position.set(7, 0, 8); scene.add(g); // ladang (x<9), bukan di tapak bukit
+  box(g, "#7a4b2d", 0.25, 3.6, 0.25, -2.2, 1.8, 0);
+  box(g, "#7a4b2d", 0.25, 3.6, 0.25, 2.2, 1.8, 0);
+  box(g, "#4f9e3d", 4.6, 2.0, 0.15, 0, 2.5, 0, { shadow: false });
+  box(g, "#5cab47", 4.6, 0.3, 0.18, 0, 3.55, 0, { shadow: false });
+  // gambar ayam terbang putih di panel
+  box(g, "#ffffff", 0.9, 0.7, 0.06, -0.5, 2.5, 0.12, { shadow: false });
+  box(g, "#ffffff", 0.5, 0.5, 0.06, -0.5, 3.0, 0.12, { shadow: false });
+  box(g, "#f59b23", 0.3, 0.15, 0.06, -0.05, 3.0, 0.12, { shadow: false });
+  box(g, "#ffffff", 1.1, 0.25, 0.06, 0.9, 2.7, 0.12, { shadow: false }).rotation.z = 0.5; // sayap
+  g.visible = false;
+  return g;
+}
+
+// Papan skor kecil Kelinci (adegan 9).
+function buildPapanSkor(scene: THREE.Scene) {
+  const g = new THREE.Group(); g.position.set(6, 0, 10.5); scene.add(g);
+  box(g, "#7a4b2d", 0.18, 1.1, 0.18, -0.6, 0.55, 0);
+  box(g, "#7a4b2d", 0.18, 1.1, 0.18, 0.6, 0.55, 0);
+  box(g, "#5a3a22", 1.7, 1.25, 0.12, 0, 1.65, 0);
+  box(g, "#f2ede2", 1.45, 1.0, 0.05, 0, 1.65, 0.08, { shadow: false });
+  box(g, "#3a3630", 0.5, 0.08, 0.05, -0.35, 1.85, 0.12, { shadow: false });
+  box(g, "#3a3630", 0.5, 0.08, 0.05, -0.35, 1.65, 0.12, { shadow: false });
+  box(g, "#3a3630", 0.5, 0.08, 0.05, -0.35, 1.45, 0.12, { shadow: false });
+  g.visible = false;
+  return g;
+}
+
+// Garis kapur latihan (adegan 7-8): garis lompat / kepak / istirahat.
+function buildGarisKapur(scene: THREE.Scene) {
+  const g = new THREE.Group(); scene.add(g);
+  for (const z of [5.4, 6.4, 7.4]) box(g, "#f2ede2", 7, 0.06, 0.3, 0, 0.14, z, { shadow: false });
+  box(g, "#f2ede2", 0.3, 0.06, 2.6, -3.5, 0.14, 6.4, { shadow: false });
+  box(g, "#f2ede2", 0.3, 0.06, 2.6, 3.5, 0.14, 6.4, { shadow: false });
+  g.visible = false;
+  return g;
+}
+
+// Bunga di lintasan lari puncak bukit (adegan 23+): dua baris di y = 6.3.
+function buildBunga(scene: THREE.Scene) {
+  const g = new THREE.Group(); scene.add(g);
+  const cols = ["#e86a8a", "#f2c14e", "#ffffff", "#c98ae8"];
+  const r = rng(77);
+  for (let i = 0; i < 16; i++) {
+    const x = 16 + i * 0.4; // tapak atas bukit (x 15..29)
+    const z = -2 + (i % 2 ? 1.1 : -1.1) + (r() - 0.5) * 0.3;
+    box(g, cols[i % 4], 0.32, 0.32, 0.32, x, BUKIT_TOP_Y + 0.16, z, { shadow: false });
+  }
+  g.visible = false;
+  return g;
+}
+
+// Bendera-bendera kecil di tepi puncak bukit (adegan 22+).
+function buildBenderaKecil(scene: THREE.Scene) {
+  const g = new THREE.Group(); scene.add(g);
+  const cols = ["#e2483d", "#f2c14e", "#3f7fd0", "#4f9e3d", "#c98ae8"];
+  const spots: [number, number][] = [[16, -6.5], [15, -7], [29, -6.5], [28, -7], [22, -7.2]]; // semua di tapak atas (x 15..29)
+  spots.forEach(([x, z], i) => {
+    box(g, "#7a4b2d", 0.12, 1.5, 0.12, x, BUKIT_TOP_Y + 0.75, z);
+    box(g, cols[i % 5], 0.7, 0.45, 0.06, x + 0.4, BUKIT_TOP_Y + 1.3, z, { shadow: false });
+  });
+  g.visible = false;
+  return g;
+}
+
+// Papan kayu balai kampung (adegan 33): nama Ayam dicatat di sini.
+function buildPapanKayu(scene: THREE.Scene) {
+  const g = new THREE.Group(); g.position.set(28.5, BUKIT_TOP_Y, -6.8); g.rotation.y = -0.5; scene.add(g);
+  box(g, "#7a4b2d", 0.2, 2.0, 0.2, -1.0, 1.0, 0);
+  box(g, "#7a4b2d", 0.2, 2.0, 0.2, 1.0, 1.0, 0);
+  box(g, "#a9743f", 2.6, 1.7, 0.14, 0, 2.4, 0);
+  box(g, "#3a3630", 1.9, 0.1, 0.05, 0, 2.8, 0.1, { shadow: false });
+  box(g, "#3a3630", 1.9, 0.1, 0.05, 0, 2.55, 0.1, { shadow: false });
+  box(g, "#3a3630", 1.2, 0.1, 0.05, 0, 2.3, 0.1, { shadow: false });
+  g.visible = false;
+  return g;
+}
+
+// Tiang bertengger Burung Tua di ladang (adegan 14-15).
+function buildPerch(scene: THREE.Scene) {
+  const g = new THREE.Group(); g.position.set(6, 0, -4); scene.add(g);
+  box(g, "#7a4b2d", 0.4, 2.4, 0.4, 0, 1.2, 0);
+  box(g, "#8a5a34", 1.6, 0.3, 0.3, 0, 2.45, 0);
+  return g;
+}
+
+// Burung Tua: varian aditif dari builder ayam — abu-abu/putih, lebih besar
+// (skala 1.45), paruh lebih panjang, alis putih, jambul putih.
+function buildBurungTua(scene: THREE.Scene) {
+  const root = new THREE.Group(); scene.add(root);
+  const W = "#e8e6e0", G = "#b9b7b0", OR = "#d97b1d";
+  box(root, W, 0.85, 0.8, 1.05, 0, 0.65, 0);
+  box(root, G, 0.85, 0.25, 1.05, 0, 0.2, 0, { shadow: false });
+  box(root, W, 0.65, 0.55, 0.32, 0, 1.0, -0.62).rotation.x = -0.5; // ekor
+  const head = new THREE.Group(); head.position.set(0, 1.1, 0.42); root.add(head);
+  box(head, W, 0.55, 0.55, 0.55, 0, 0.27, 0);
+  box(head, "#ffffff", 0.22, 0.24, 0.32, 0, 0.65, 0, { shadow: false }); // jambul putih
+  box(head, OR, 0.26, 0.16, 0.5, 0, 0.2, 0.45, { shadow: false }); // paruh panjang
+  box(head, "#ffffff", 0.2, 0.08, 0.06, -0.18, 0.44, 0.28, { shadow: false }); // alis
+  box(head, "#ffffff", 0.2, 0.08, 0.06, 0.18, 0.44, 0.28, { shadow: false });
+  box(head, "#1d1a17", 0.08, 0.1, 0.04, -0.2, 0.34, 0.29, { shadow: false });
+  box(head, "#1d1a17", 0.08, 0.1, 0.04, 0.2, 0.34, 0.29, { shadow: false });
+  box(root, OR, 0.09, 0.35, 0.09, -0.18, 0.17, 0.1); box(root, OR, 0.09, 0.35, 0.09, 0.18, 0.17, 0.1);
+  root.scale.setScalar(1.45);
+  root.traverse((o) => { o.frustumCulled = false; });
+  return { root, head };
+}
+
+// Burung-burung langit (adegan 2, 28, 29, 36): tiga burung kecil yang
+// terbang melingkar; story.ts menggerakkan posisinya per frame.
+function buildBurungLangit(scene: THREE.Scene) {
+  const birds: THREE.Group[] = [];
+  for (let i = 0; i < 3; i++) {
+    const b = new THREE.Group(); scene.add(b);
+    // badan abu-abu terang + sayap abu-abu gelap, skala 0.8 — terbaca sebagai
+    // burung di langit (versi gelap sebelumnya tampak seperti serpihan hitam)
+    box(b, "#d8d8d8", 0.4, 0.22, 0.68, 0, 0, 0);
+    box(b, "#d8d8d8", 0.2, 0.16, 0.2, 0, 0.05, 0.42, { shadow: false }); // kepala
+    box(b, "#f59b23", 0.12, 0.08, 0.16, 0, 0.05, 0.55, { shadow: false }); // paruh
+    const wL = box(b, "#555555", 0.9, 0.06, 0.32, -0.6, 0.04, 0); wL.name = "wingL";
+    const wR = box(b, "#555555", 0.9, 0.06, 0.32, 0.6, 0.04, 0); wR.name = "wingR";
+    b.scale.setScalar(0.8);
+    b.visible = false;
+    birds.push(b);
+  }
+  return birds;
+}
+
 // ---------------------------------------------------------------- structures
 export const BIMA_PLOT: [number, number] = [-10, 0];
 export const TETANGGA_PLOT: [number, number] = [8, -4];
@@ -538,6 +722,20 @@ export function buildWorld(scene: THREE.Scene): MenaraRefs {
   const bridge = buildBridge(scene);
   const ladderSmall = buildLadderSmall(scene);
 
+  // --- aditif Ayam Kubus
+  const bukit = buildBukit(scene);
+  const slimeBlock = buildSlime(scene);
+  const jerami = buildJerami(scene);
+  const spanduk = buildSpanduk(scene);
+  const papanSkor = buildPapanSkor(scene);
+  const garisKapur = buildGarisKapur(scene);
+  const bunga = buildBunga(scene);
+  const benderaKecil = buildBenderaKecil(scene);
+  const papanKayu = buildPapanKayu(scene);
+  const perch = buildPerch(scene);
+  const bt = buildBurungTua(scene);
+  const burungLangit = buildBurungLangit(scene);
+
   return {
     bima: b.root, bimaHead: b.headG, headNormal: b.faceN, headTired: b.faceT,
     armL: b.armL, armR: b.armR, legL: b.legL, legR: b.legR, torso: b.torso,
@@ -555,5 +753,8 @@ export function buildWorld(scene: THREE.Scene): MenaraRefs {
     rubbleBima, rubbleTetangga, ladderSmall,
     bridge: bridge.g, bridgeDeck: bridge.deck, bridgeRails: bridge.rails, bridgeFlag: bridge.flag,
     water, storm, stars, sunMesh: sun, skyMat: mtl,
+    burungTua: bt.root, burungTuaHead: bt.head,
+    slimeBlock, bukit, jerami, spanduk, papanSkor, garisKapur,
+    bunga, benderaKecil, papanKayu, perch, burungLangit,
   };
 }
