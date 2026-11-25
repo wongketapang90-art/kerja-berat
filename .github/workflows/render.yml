@@ -2,6 +2,26 @@ name: Render Bima 3D (kerja-berat)
 
 on:
   workflow_dispatch:
+    inputs:
+      project:
+        description: 'Folder proyek yang dirender'
+        required: true
+        type: choice
+        options:
+          - bima3d
+          - kapten3d
+          - menara3d
+        default: bima3d
+      comp:
+        description: 'ID komposisi (kosongkan = bawaan proyek: BimaTangga / KaptenBlok / BimaMenara)'
+        required: false
+        type: string
+        default: ''
+      frames:
+        description: 'Rentang frame "awal-akhir", mis. 0-149 (kosongkan = render penuh)'
+        required: false
+        type: string
+        default: ''
   push:
     branches: [main]
     paths:
@@ -15,7 +35,7 @@ permissions:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 360
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,26 +47,44 @@ jobs:
           cache: npm
           cache-dependency-path: bima3d/package-lock.json
 
-      - name: Render (job-kerja-berat.sh)
-        run: bash job-kerja-berat.sh
+      - name: Tentukan target render
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "PROJECT_DIR=${{ inputs.project }}" >> "$GITHUB_ENV"
+            echo "RENDER_SCRIPT=job-render.sh" >> "$GITHUB_ENV"
+            echo "COMP_ID=${{ inputs.comp }}" >> "$GITHUB_ENV"
+            echo "FRAME_RANGE=${{ inputs.frames }}" >> "$GITHUB_ENV"
+            echo "Target (dispatch): proyek=${{ inputs.project }} komposisi='${{ inputs.comp }}' frame='${{ inputs.frames }}'"
+          else
+            echo "PROJECT_DIR=bima3d" >> "$GITHUB_ENV"
+            echo "RENDER_SCRIPT=job-kerja-berat.sh" >> "$GITHUB_ENV"
+            echo "Target (push): jalur lama — bima3d / BimaTangga penuh via job-kerja-berat.sh"
+          fi
+
+      - name: Render
+        run: bash "$RENDER_SCRIPT"
 
       - name: Periksa hasil render
         run: |
-          test -s bima3d/out/video.mp4
-          ls -la bima3d/hasil-run/
-          test -n "$(ls -A bima3d/hasil-run/)"
+          test -s "$PROJECT_DIR/out/video.mp4"
+          ls -la "$PROJECT_DIR/hasil-run/"
+          test -n "$(ls -A "$PROJECT_DIR/hasil-run/")"
 
       - name: Terbitkan potongan hasil sebagai Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "render-${{ github.run_number }}" bima3d/hasil-run/* \
+          NOTES="Potongan video hasil render otomatis (GitHub Actions run #${{ github.run_number }}, commit ${{ github.sha }}). Proyek: $PROJECT_DIR."
+          if [ -n "$COMP_ID" ]; then NOTES="$NOTES Komposisi: $COMP_ID."; fi
+          if [ -n "$FRAME_RANGE" ]; then NOTES="$NOTES Rentang frame: $FRAME_RANGE."; fi
+          NOTES="$NOTES Rakit kembali berurutan: cat chunk-00 chunk-01 ... > video.mp4"
+          gh release create "render-${{ github.run_number }}" "$PROJECT_DIR"/hasil-run/* \
             --title "Render #${{ github.run_number }}" \
-            --notes "Potongan video hasil render otomatis (GitHub Actions run #${{ github.run_number }}, commit ${{ github.sha }}). Rakit kembali berurutan: cat chunk-00 chunk-01 ... > video.mp4"
+            --notes "$NOTES"
 
       - name: Simpan hasil sebagai artifact (cadangan)
         uses: actions/upload-artifact@v4
         with:
           name: hasil-run-${{ github.run_number }}
-          path: bima3d/hasil-run/
+          path: ${{ env.PROJECT_DIR }}/hasil-run/
           if-no-files-found: error
