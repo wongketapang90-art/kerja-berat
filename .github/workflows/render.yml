@@ -11,6 +11,7 @@ on:
           - bima3d
           - kapten3d
           - menara3d
+          - kaptenmenara3d
         default: bima3d
       comp:
         description: 'ID komposisi (kosongkan = bawaan proyek: BimaTangga / KaptenBlok / BimaMenara)'

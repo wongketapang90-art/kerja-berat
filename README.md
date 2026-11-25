@@ -13,6 +13,7 @@ supaya beberapa komposisi bisa dirender **bersamaan** di runner terpisah.
 | `bima3d/` | `BimaTangga` | 1080×1920 (potret) | Shorts Dunia Bima (jalur asli, tidak berubah) |
 | `kapten3d/` | `KaptenBlok` | 1080×1920 (potret) | Shorts Kapten Blok 3D |
 | `menara3d/` | `BimaMenara` | 1920×1080 (lanskap) | Video panjang Dunia Bima 3D |
+| `kaptenmenara3d/` | `KaptenMenara` | 1920×1080 (lanskap) | Video panjang Kapten Blok 3D |
 
 Setiap folder adalah proyek Remotion 4 + three.js mandiri (dependensi sama,
 `package-lock.json` identik) dengan sumber episode aktif di `src/` dan
@@ -25,7 +26,7 @@ utilitas audio/suara/timing/QA di subfolder masing-masing.
    `job-kerja-berat.sh` merender `BimaTangga` penuh dari `bima3d/`.
 2. **Pemicuan manual** (Actions → *Render Bima 3D (kerja-berat)* → *Run
    workflow*) memilih target lewat input:
-   - `project` — folder proyek: `bima3d`, `kapten3d`, atau `menara3d`;
+   - `project` — folder proyek: `bima3d`, `kapten3d`, `menara3d`, atau `kaptenmenara3d`;
    - `comp` — id komposisi (kosongkan untuk bawaan proyek di tabel atas);
    - `frames` — rentang frame `awal-akhir` (mis. `0-149` untuk uji segmen
      pendek; kosongkan untuk render penuh).
@@ -51,5 +52,5 @@ dirender penuh dalam satu run (batas waktu workflow 360 menit).
   standar Bima 3D; dipakai jalur push).
 - `job-render.sh` — skrip pekerjaan render umum berparameter (dipakai jalur
   dispatch untuk ketiga proyek).
-- `bima3d/`, `kapten3d/`, `menara3d/` — proyek Remotion per komposisi.
+- `bima3d/`, `kapten3d/`, `menara3d/`, `kaptenmenara3d/` — proyek Remotion per komposisi.
 - `.github/workflows/render.yml` — alur GitHub Actions.
